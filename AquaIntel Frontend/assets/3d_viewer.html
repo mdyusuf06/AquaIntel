@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>3D Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0D1117; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0D1117);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 50, 50);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
+
+    window.loadHeightmap = function(base64Png, physicalWidth, physicalLength, physicalHeight) {
+        const width = physicalWidth || 100;
+        const length = physicalLength || 100;
+        const heightScale = physicalHeight || 15.0;
+
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(base64Png, (texture) => {
+            const geometry = new THREE.PlaneGeometry(width, length, 128, 128);
+            geometry.rotateX(-Math.PI / 2);
+
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x1A5276,
+                wireframe: false,
+                displacementMap: texture,
+                displacementScale: heightScale,
+                roughness: 0.6,
+                metalness: 0.2
+            });
+
+            const oldMesh = scene.getObjectByName('sonarMesh');
+            if(oldMesh) scene.remove(oldMesh);
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.name = 'sonarMesh';
+            scene.add(mesh);
+            
+            // Adjust camera to fit the new dimensions
+            const maxDim = Math.max(width, length);
+            camera.position.set(0, maxDim * 0.8, maxDim * 0.8);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+    }
+
+    // Default procedural placeholder if no base64 is provided
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(64,64,0, 64,64,64);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,128,128);
+    window.loadHeightmap(canvas.toDataURL());
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+</script>
+</body>
+</html>
