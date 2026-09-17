@@ -1,0 +1,116 @@
+Metadata-Version: 2.4
+Name: sonar_pipeline
+Version: 0.1.0
+Summary: AquaIntel Part 1: Physics-Based Ingestion, Preprocessing & Physics Feature Engine for Side-Scan Sonar
+Author-email: Team Brainwave <brainwave@aquaintel.ai>
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: scipy>=1.10.0
+Requires-Dist: opencv-python>=4.8.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: rasterio>=1.3.0
+Requires-Dist: pyproj>=3.5.0
+Requires-Dist: scikit-image>=0.20.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+
+# AquaIntel — Sonar Pipeline (Part 1)
+**Physics-Based, Retrieval-Driven Underwater Marine Debris and Anomaly Detection**  
+*SIH 2026 | Problem Statement 26057 | Team Brainwave*
+
+---
+
+## Overview
+
+AquaIntel treats side-scan sonar detection not as an uninterpretable black box, but as a physically grounded system where object identity stems from acoustic physics (shadow geometry $\to$ true physical height & morphology) feeding a retrieval and matching stage.
+
+This module constitutes **Part 1 — Ingestion, Preprocessing & Physics Feature Engine**:
+1. **Step 0 — Ingestion & Georeferencing**: Parses XTF, GeoTIFF, and PNG/NPY with JSON sidecars, extracting physical sensor metadata ($H_{\text{tow}}$, $R$, Heading, GPS) and resampling to a sensor-agnostic metric resolution ($0.05\,\text{m/px}$) with CRS-aware Affine georeferencing.
+2. **Step 1 — Denoising & Motion Dropout Correction**: Suppresses multiplicative speckle noise via an Adaptive Lee Filter (with edge preservation) and corrects cross-ping motion dropouts ($\le 3$ rows linear 1D interpolation; $> 3$ rows masked as non-surveyable).
+3. **Step 2 — Physics Feature Extraction**: Pairs acoustic highlights with their range shadows, computes true physical object heights using $\text{Height} = H_{\text{tow}} \times (L_{\text{shadow}} / R)$, extracts Haralick texture descriptors via scikit-image GLCM, and emits structured `SonarObjectFeature` records.
+
+---
+
+## Directory Structure
+
+```
+smart india hackathon/
+├── pyproject.toml
+├── README.md
+└── sonar_pipeline/
+    ├── __init__.py           # Public exports
+    ├── schemas.py            # Pydantic data models & configurations
+    ├── ingestion.py          # Step 0: Multi-format parsing & metric resampling
+    ├── preprocessing.py      # Step 1: Adaptive Lee filter & motion dropout correction
+    ├── physics.py            # Step 2: Highlight-shadow pairing & acoustic height formula
+    ├── pipeline.py           # End-to-end pipeline orchestrator
+    └── tests/                # Pytest suite with synthetic sonar fixtures
+        ├── __init__.py
+        ├── test_schemas.py
+        ├── test_ingestion.py
+        ├── test_preprocessing.py
+        ├── test_physics.py
+        └── test_pipeline.py
+```
+
+---
+
+## Acoustic Physics & Equations
+
+### 1. Object Height from Acoustic Shadow
+$$\text{Height} = H_{\text{tow}} \times \left(\frac{L_{\text{shadow}}}{R}\right)$$
+- $H_{\text{tow}}$: Towfish altitude above seabed (meters)
+- $L_{\text{shadow}}$: Measured shadow length along acoustic range ray (meters)
+- $R$: Slant range distance from sonar nadir to object highlight (meters)
+
+### 2. Adaptive Lee Filter for Speckle Reduction
+$$W = \max\left(0, \frac{\sigma_y^2 - \sigma_n^2}{\sigma_y^2}\right), \quad \hat{I} = \mu + W \cdot (I - \mu)$$
+- At shadow boundaries: $\sigma_y^2 \gg \sigma_n^2 \implies W \to 1 \implies \hat{I} \approx I$ (preserves sharp edges).
+- In homogeneous seafloor: $\sigma_y^2 \approx \sigma_n^2 \implies W \to 0 \implies \hat{I} \approx \mu$ (smooths speckle).
+
+---
+
+## Usage Example
+
+```python
+from sonar_pipeline import SonarPipeline, PipelineConfig
+
+# 1. Configure pipeline parameters
+config = PipelineConfig(
+    target_resolution_m_per_px=0.05,  # 5 cm/pixel metric resolution
+    denoise_method="lee",             # Adaptive Lee filter
+    lee_window_size=7,
+    dropout_max_interp_rows=3,        # Gap <= 3 rows interpolated; > 3 rows masked
+    target_crs="EPSG:32630",
+)
+
+# 2. Initialize orchestrator
+pipeline = SonarPipeline(config=config)
+
+# 3. Process raw sonar survey file (XTF, GeoTIFF, or PNG/NPY with JSON sidecar)
+result = pipeline.process("path/to/sonar_file.tif")
+
+# 4. Access preprocessed array and structured physics features
+print(f"Detected {result.num_objects_detected} physical anomalies.")
+for obj in result.features:
+    print(f"Object ID: {obj.object_id}")
+    print(f"  Computed Height: {obj.computed_height_m:.2f} m")
+    print(f"  Shadow Length:   {obj.shadow_length_m:.2f} m")
+    print(f"  Slant Range:     {obj.slant_range_m:.2f} m")
+    print(f"  Shadow Area:     {obj.shadow_area_m2:.2f} m^2")
+    print(f"  Haralick Contrast: {obj.haralick_features.contrast:.4f}")
+    print(f"  Geo Coordinate:  {obj.center_geo}")
+
+# 5. Export features to JSON for downstream retrieval & vector embedding
+pipeline.export_features_json(result.features, "output_features.json")
+```
+
+---
+
+## Running Unit Tests
+
+Run all 24 synthetic fixture test suites:
+```powershell
+py -3.10 -m pytest sonar_pipeline/tests -v
+```

@@ -1,0 +1,16 @@
+{
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Windows",
+  "venvPath": ".",
+  "venv": "venv",
+  "extraPaths": [
+    ".",
+    "sonar_pipeline"
+  ],
+  "ignore": [
+    "venv/**",
+    "everthing/**"
+  ],
+  "reportMissingModuleSource": "none",
+  "reportMissingImports": "warning"
+}

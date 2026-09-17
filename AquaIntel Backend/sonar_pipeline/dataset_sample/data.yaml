@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 4
+names: ['aircraft', 'fish', 'other', 'shipwreck']
+
+roboflow:
+  workspace: object-detect-ury2h
+  project: sonar_detect
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/object-detect-ury2h/sonar_detect/dataset/1

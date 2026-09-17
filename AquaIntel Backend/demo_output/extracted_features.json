@@ -1,0 +1,37 @@
+[
+  {
+    "object_id": "sonar_obj_001",
+    "bbox_px": [
+      300,
+      69,
+      347,
+      87
+    ],
+    "center_px": [
+      314.01,
+      77.5
+    ],
+    "center_geo": [
+      500015.700735,
+      5599996.124768
+    ],
+    "slant_range_m": 5.125,
+    "shadow_length_m": 2.05,
+    "computed_height_m": 4.0,
+    "shadow_area_m2": 1.615,
+    "highlight_area_m2": 0.24,
+    "highlight_to_shadow_ratio": 0.1486,
+    "principal_axis_orientation_deg": 0.08,
+    "haralick_features": {
+      "contrast": 6.2688,
+      "dissimilarity": 0.8485,
+      "homogeneity": 0.8519,
+      "energy": 0.7007,
+      "correlation": 0.8474,
+      "asm": 0.491
+    },
+    "confidence": 0.62,
+    "is_valid_physics": true,
+    "notes": "Physics-derived highlight-shadow pair"
+  }
+]

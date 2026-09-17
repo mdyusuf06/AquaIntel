@@ -1,0 +1,12 @@
+{
+  "h_tow_m": 10.0,
+  "slant_range_max_m": 20.0,
+  "origin_lon": 500000.0,
+  "origin_lat": 5600000.0,
+  "heading_deg": 90.0,
+  "source_resolution_x_m_per_px": 0.05,
+  "source_resolution_y_m_per_px": 0.05,
+  "target_resolution_m_per_px": 0.05,
+  "crs": "EPSG:32630",
+  "sensor_name": "AquaIntel-Towfish-Sim"
+}
